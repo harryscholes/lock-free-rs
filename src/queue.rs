@@ -32,10 +32,7 @@ pub struct Queue<T> {
     tail: AtomicPtr<Node<T>>,
 }
 
-impl<T> Queue<T>
-where
-    T: std::fmt::Debug,
-{
+impl<T> Queue<T> {
     pub fn new() -> Self {
         let sentinel = Box::into_raw(Box::new(Node::null()));
         Self {
@@ -132,6 +129,12 @@ where
             std::thread::sleep(backoff);
             backoff *= 2;
         }
+    }
+}
+
+impl<T> Default for Queue<T> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
