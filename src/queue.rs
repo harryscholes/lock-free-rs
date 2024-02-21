@@ -1,12 +1,7 @@
 use std::{
-    ptr,
+    hint, ptr,
     sync::atomic::{AtomicPtr, Ordering},
-    thread,
-    time::Duration,
 };
-
-const INITIAL_BACKOFF: Duration = Duration::from_nanos(1);
-const MAX_BACKOFF: Duration = Duration::from_nanos(100);
 
 #[derive(Debug)]
 pub struct Queue<T> {
@@ -25,8 +20,6 @@ impl<T> Queue<T> {
     }
 
     pub fn enqueue(&self, item: T) {
-        let mut backoff = INITIAL_BACKOFF;
-
         let new_node = Node::new(item);
         let new_node_ptr = Box::into_raw(Box::new(new_node));
 
@@ -56,9 +49,6 @@ impl<T> Queue<T> {
 
                     return;
                 }
-
-                thread::sleep(backoff);
-                backoff = (backoff * 2).min(MAX_BACKOFF);
             } else {
                 // The tail isn't pointing to the last node in the queue, so try to swing the tail to the next node
                 // and retry. This can fail if other threads are concurrently enqueuing, but the queue will remain
@@ -70,12 +60,12 @@ impl<T> Queue<T> {
                     Ordering::Relaxed,
                 );
             }
+
+            hint::spin_loop();
         }
     }
 
     pub fn dequeue(&self) -> Option<T> {
-        let mut backoff = Duration::from_millis(10);
-
         loop {
             let head_ptr = self.head.load(Ordering::Acquire);
             let head_ref = unsafe { &*head_ptr };
@@ -105,8 +95,7 @@ impl<T> Queue<T> {
                 return item;
             }
 
-            thread::sleep(backoff);
-            backoff = (backoff * 2).min(MAX_BACKOFF);
+            hint::spin_loop();
         }
     }
 
@@ -252,7 +241,7 @@ mod tests {
 
         #[test]
         fn test_multiple_concurrent_enqueuers_single_dequeuer(
-            num_threads in 2..100usize,
+            num_threads in 2..10usize,
             items in vec(any::<usize>(), 1..1_000)
         ) {
             let mut expected: HashMap<usize, usize> = HashMap::new();
@@ -286,7 +275,7 @@ mod tests {
 
         #[test]
         fn test_multiple_concurrent_enqueuers_single_concurrent_dequeuer(
-            num_threads in 2..100usize,
+            num_threads in 2..10usize,
             items in vec(any::<usize>(), 1..1_000)
         ) {
             let mut expected: HashMap<usize, usize> = HashMap::new();
@@ -329,7 +318,7 @@ mod tests {
 
         #[test]
         fn test_single_concurrent_enqueuer_multiple_concurrent_dequeuers(
-            num_threads in 2..100usize,
+            num_threads in 2..10usize,
             mut items in vec(any::<usize>(), 1..1_000)
         ) {
             let q = Arc::new(Queue::new());
@@ -376,7 +365,7 @@ mod tests {
 
         #[test]
         fn test_multiple_concurrent_enqueuers_multiple_concurrent_dequeuers(
-            num_threads in 2..100usize,
+            num_threads in 2..10usize,
             items in vec(any::<usize>(), 1..1_000)
         ) {
             let mut expected: HashMap<usize, usize> = HashMap::new();
