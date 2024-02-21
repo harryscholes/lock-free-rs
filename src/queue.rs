@@ -252,7 +252,7 @@ mod tests {
 
         #[test]
         fn test_multiple_concurrent_enqueuers_single_dequeuer(
-            num_threads in 2..10usize,
+            num_threads in 2..100usize,
             items in vec(any::<usize>(), 1..1_000)
         ) {
             let mut expected: HashMap<usize, usize> = HashMap::new();
@@ -286,7 +286,7 @@ mod tests {
 
         #[test]
         fn test_multiple_concurrent_enqueuers_single_concurrent_dequeuer(
-            num_threads in 2..10usize,
+            num_threads in 2..100usize,
             items in vec(any::<usize>(), 1..1_000)
         ) {
             let mut expected: HashMap<usize, usize> = HashMap::new();
@@ -329,7 +329,7 @@ mod tests {
 
         #[test]
         fn test_single_concurrent_enqueuer_multiple_concurrent_dequeuers(
-            num_threads in 2..10usize,
+            num_threads in 2..100usize,
             mut items in vec(any::<usize>(), 1..1_000)
         ) {
             let q = Arc::new(Queue::new());
@@ -376,7 +376,7 @@ mod tests {
 
         #[test]
         fn test_multiple_concurrent_enqueuers_multiple_concurrent_dequeuers(
-            num_threads in 2..10usize,
+            num_threads in 2..100usize,
             items in vec(any::<usize>(), 1..1_000)
         ) {
             let mut expected: HashMap<usize, usize> = HashMap::new();
@@ -443,17 +443,23 @@ mod tests {
 
             prop_assert!(expected.is_empty());
         }
-    }
 
-    #[test]
-    fn test_is_empty() {
-        let q: Queue<usize> = Queue::new();
-        assert!(q.is_empty());
+        #[test]
+        fn test_is_empty(test_size in 1..1_000usize) {
+            let q: Queue<usize> = Queue::new();
+            assert!(q.is_empty());
 
-        q.enqueue(0);
-        assert!(!q.is_empty());
+            for item in 0..test_size {
+                q.enqueue(item);
+                assert!(!q.is_empty());
+            }
 
-        q.dequeue();
-        assert!(q.is_empty());
+            for _ in 0..test_size {
+                assert!(!q.is_empty());
+                q.dequeue();
+            }
+
+            assert!(q.is_empty());
+        }
     }
 }
