@@ -113,17 +113,13 @@ impl<T> Queue<T> {
                 // The empty head node has been dequeued and the next node is now at the head.
                 // Take the item out of the new head node.
                 let next_ref = unsafe { &mut *next_ptr };
-                // let item = next_ref.item.take();
-                let next_node = unsafe { ptr::read(next_ref as *const Node<T>) };
+                let item = next_ref.item.take();
 
-                // TODO Deallocate the node's memory using epoch-based memory reclamation e.g. crossbeam-epoch.
+                // TODO Deallocate the node's memory.
+                // Epoch-based memory reclamation e.g. crossbeam-epoch could be used to safely deallocate the node's memory.
+                // To minimise the amount of memory leaked, we take the item out of its `Option`, leaving `None` behind.
 
-                // Take ownership of the dequeued node, so it will get deallocated when it gets dropped.
-                // _ = unsafe { Box::from_raw(head_ptr) };
-
-                // dbg!(&next_node.item);
-
-                return next_node.item;
+                return item;
             }
 
             std::thread::sleep(backoff);
