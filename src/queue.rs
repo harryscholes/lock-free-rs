@@ -5,6 +5,9 @@ use std::{
     time::Duration,
 };
 
+const INITIAL_BACKOFF: Duration = Duration::from_nanos(1);
+const MAX_BACKOFF: Duration = Duration::from_nanos(100);
+
 #[derive(Debug)]
 pub struct Queue<T> {
     head: AtomicPtr<Node<T>>,
@@ -14,6 +17,7 @@ pub struct Queue<T> {
 impl<T> Queue<T> {
     pub fn new() -> Self {
         let sentinel = Box::into_raw(Box::new(Node::null()));
+
         Self {
             head: AtomicPtr::new(sentinel),
             tail: AtomicPtr::new(sentinel),
@@ -21,7 +25,7 @@ impl<T> Queue<T> {
     }
 
     pub fn enqueue(&self, item: T) {
-        let mut backoff = Duration::from_millis(10);
+        let mut backoff = INITIAL_BACKOFF;
 
         let new_node = Node::new(item);
         let new_node_ptr = Box::into_raw(Box::new(new_node));
@@ -52,6 +56,9 @@ impl<T> Queue<T> {
 
                     return;
                 }
+
+                thread::sleep(backoff);
+                backoff = (backoff * 2).min(MAX_BACKOFF);
             } else {
                 // The tail isn't pointing to the last node in the queue, so try to swing the tail to the next node
                 // and retry. This can fail if other threads are concurrently enqueuing, but the queue will remain
@@ -63,9 +70,6 @@ impl<T> Queue<T> {
                     Ordering::Relaxed,
                 );
             }
-
-            thread::sleep(backoff);
-            backoff *= 2;
         }
     }
 
@@ -102,7 +106,7 @@ impl<T> Queue<T> {
             }
 
             thread::sleep(backoff);
-            backoff *= 2;
+            backoff = (backoff * 2).min(MAX_BACKOFF);
         }
     }
 
