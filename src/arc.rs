@@ -35,14 +35,15 @@ impl<T> Arc<T> {
     }
 
     pub fn try_unwrap(this: Arc<T>) -> Result<T, Arc<T>> {
-        // When more than one reference exists, we release ownership of the data.
+        // When only one reference exists, we release ownership of the data.
         if this
             .inner()
             .count
             .compare_exchange(1, 0, Release, Relaxed)
             .is_ok()
         {
-            // When only one reference exists, we acquire ownership of the data so that we can drop it.
+            // When no more references exist, we use a fence to acquire ownership of the data, so that we can drop it
+            // without any other thread accessing it.
             fence(Acquire);
 
             let inner = unsafe { Box::from_raw(this.inner.as_ptr()) };
