@@ -90,7 +90,7 @@ unsafe impl<T> Sync for Arc<T> {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::{sync, thread};
+    use std::{hint, sync, thread};
 
     use proptest::prelude::*;
 
@@ -169,22 +169,24 @@ mod tests {
             let (tx, rx) = sync::mpsc::channel();
 
             let h = thread::spawn(move|| {
-                let b = Arc::try_unwrap(b).unwrap_err();
+                let mut b = Arc::try_unwrap(b).unwrap_err();
 
+                // Signal that we've tried, and failed, to unwrap the data.
                 tx.send(()).unwrap();
 
-                fn recurse<T>(arc: Arc<T>) -> T {
-                    match Arc::try_unwrap(arc) {
-                        Ok(d) => d,
-                        Err(a) => recurse(a),
+                loop {
+                    // This will fail until `a` is dropped by the other thread.
+                    match Arc::try_unwrap(b) {
+                        Ok(d) => return d,
+                        Err(a) => b = a,
                     }
-                }
 
-                recurse(b)
+                    hint::spin_loop();
+                }
             });
 
+            // Once the other thread has tried, and failed, to unwrap the data, `a` is dropped so that the data can be unwrapped.
             rx.recv().unwrap();
-
             drop(a);
 
             let d = h.join().unwrap();
