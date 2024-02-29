@@ -27,13 +27,6 @@ impl<T> Arc<T> {
         Self { inner }
     }
 
-    pub fn clone(&self) -> Self {
-        // Use relaxed ordering because the order of this relative to other operations doesn't matter.
-        self.inner().count.fetch_add(1, Relaxed);
-
-        Self { inner: self.inner }
-    }
-
     pub fn try_unwrap(this: Arc<T>) -> Result<T, Arc<T>> {
         // When only one reference exists, we release ownership of the data.
         if this
@@ -62,6 +55,15 @@ impl<T> Arc<T> {
 
     fn inner(&self) -> &Inner<T> {
         unsafe { self.inner.as_ref() }
+    }
+}
+
+impl<T> Clone for Arc<T> {
+    fn clone(&self) -> Self {
+        // Use relaxed ordering because the order of this relative to other operations doesn't matter.
+        self.inner().count.fetch_add(1, Relaxed);
+
+        Self { inner: self.inner }
     }
 }
 
