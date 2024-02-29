@@ -31,6 +31,23 @@ jobs:
         with:
           command: test
 
+  loom:
+    name: Loom Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --release
+        env:
+          RUSTFLAGS: --cfg loom
+
   fmt:
     name: Rustfmt
     runs-on: ubuntu-latest
