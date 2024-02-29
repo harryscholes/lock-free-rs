@@ -1,5 +1,13 @@
+use std::ptr;
+
+#[cfg(loom)]
+use loom::{
+    hint,
+    sync::atomic::{AtomicPtr, Ordering},
+};
+#[cfg(not(loom))]
 use std::{
-    hint, ptr,
+    hint,
     sync::atomic::{AtomicPtr, Ordering},
 };
 
@@ -137,6 +145,7 @@ impl<T> Node<T> {
 }
 
 #[cfg(test)]
+#[cfg(not(loom))]
 mod tests {
     use std::{
         collections::HashMap,
@@ -450,5 +459,44 @@ mod tests {
 
             assert!(q.is_empty());
         }
+    }
+}
+
+#[cfg(test)]
+#[cfg(loom)]
+mod loom_tests {
+    use loom::{sync::Arc, thread};
+
+    use super::*;
+
+    #[test]
+    fn test_multiple_concurrent_enqueuers_single_dequeuer() {
+        loom::model(|| {
+            let num_threads = 2;
+
+            let q = Arc::new(Queue::new());
+
+            let handles = (0..num_threads)
+                .map(|i| {
+                    let q = q.clone();
+
+                    thread::spawn(move || {
+                        q.enqueue(i);
+                    })
+                })
+                .collect::<Vec<_>>();
+
+            for handle in handles {
+                handle.join().unwrap();
+            }
+
+            let mut res = vec![];
+            while let Some(item) = q.dequeue() {
+                res.push(item);
+            }
+            res.sort();
+
+            assert_eq!(res, (0..num_threads).collect::<Vec<_>>());
+        });
     }
 }
