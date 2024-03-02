@@ -140,7 +140,7 @@ impl<T> Node<T> {
 mod tests {
     use std::{
         collections::HashMap,
-        sync::{atomic::AtomicBool, Arc},
+        sync::{atomic::AtomicBool, mpsc, Arc, Mutex},
         thread,
     };
 
@@ -240,6 +240,40 @@ mod tests {
         }
 
         #[test]
+        fn test_multiple_concurrent_enqueurs_fifo_order(
+            num_threads in 2..10usize,
+            num_items in 0..100_000usize,
+        ) {
+            let q = Arc::new(Queue::new());
+            let x = Arc::new(Mutex::new(0usize));
+
+            thread::scope(|s| {
+                for _ in 0..num_threads {
+                    let q = q.clone();
+                    let x = x.clone();
+
+                    s.spawn(move || {
+                        loop {
+                            let mut guard = x.lock().unwrap();
+                            if *guard >= num_items {
+                                break
+                            }
+                            q.enqueue(*guard);
+                            *guard += 1;
+                        }
+                    });
+                }
+            });
+
+            let mut expected = 0;
+
+            while let Some(item) = q.dequeue() {
+                assert_eq!(item, expected);
+                expected += 1;
+            }
+        }
+
+        #[test]
         fn test_multiple_concurrent_enqueuers_single_dequeuer(
             num_threads in 2..10usize,
             items in vec(any::<usize>(), 1..1_000)
@@ -285,7 +319,7 @@ mod tests {
 
             let q = Arc::new(Queue::new());
 
-            let (tx, rx) = std::sync::mpsc::channel();
+            let (tx, rx) = mpsc::channel();
 
             for _ in 0..num_threads {
                 let items = items.clone();
@@ -323,7 +357,7 @@ mod tests {
         ) {
             let q = Arc::new(Queue::new());
 
-            let (tx, rx) = std::sync::mpsc::channel();
+            let (tx, rx) = mpsc::channel();
             let enqueuing = Arc::new(AtomicBool::new(true));
 
             for _ in 0..num_threads {
@@ -375,8 +409,8 @@ mod tests {
 
             let q = Arc::new(Queue::new());
 
-            let (enqueuer_tx, enqueuer_rx) = std::sync::mpsc::channel();
-            let (dequeuer_tx, dequeuer_rx) = std::sync::mpsc::channel();
+            let (enqueuer_tx, enqueuer_rx) = mpsc::channel();
+            let (dequeuer_tx, dequeuer_rx) = mpsc::channel();
             let enqueuing = Arc::new(AtomicBool::new(true));
 
             for _ in 0..num_threads {
