@@ -62,32 +62,40 @@ impl<T> Receiver<T> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::thread;
 
-    #[test]
-    fn test_send_receive() {
-        let (tx, rx) = channel();
+    use super::*;
+    use proptest::prelude::*;
 
-        assert_eq!(rx.receive(), None);
+    proptest! {
+        #[test]
+        fn test_send_receive(data in any::<String>()) {
+            let (tx, rx) = channel();
 
-        tx.send(0);
+            prop_assert_eq!(rx.receive(), None);
 
-        assert_eq!(rx.receive(), Some(0));
-        assert_eq!(rx.receive(), None);
-    }
+            tx.send(data.clone());
 
-    #[test]
-    fn test_send_receive_thread_safe() {
-        let (tx, rx) = channel();
+            prop_assert_eq!(rx.receive(), Some(data));
+            prop_assert_eq!(rx.receive(), None);
+        }
 
-        thread::spawn(move || {
-            tx.send(0);
-        })
-        .join()
-        .unwrap();
+        #[test]
+        fn test_send_receive_thread_safe(data in any::<String>()) {
+            let (tx, rx) = channel();
 
-        assert_eq!(rx.receive(), Some(0));
-        assert_eq!(rx.receive(), None);
+            {
+                let data = data.clone();
+
+                thread::spawn(move || {
+                    tx.send(data);
+                })
+                .join()
+                .unwrap();
+            }
+
+            prop_assert_eq!(rx.receive(), Some(data));
+            prop_assert_eq!(rx.receive(), None);
+        }
     }
 }
