@@ -1,10 +1,8 @@
+use crate::arc::Arc;
 use crate::queue::Queue;
 use std::{
     hint,
-    sync::{
-        atomic::{AtomicUsize, Ordering::Relaxed},
-        Arc,
-    },
+    sync::atomic::{AtomicUsize, Ordering::Relaxed},
 };
 
 pub fn channel<T>() -> (Sender<T>, Receiver<T>) {

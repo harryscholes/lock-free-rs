@@ -1,12 +1,10 @@
+use crate::arc::Arc;
 use std::{
     cell::UnsafeCell,
     mem::MaybeUninit,
-    sync::{
-        atomic::{
-            AtomicBool,
-            Ordering::{Acquire, Release},
-        },
-        Arc,
+    sync::atomic::{
+        AtomicBool,
+        Ordering::{Acquire, Release},
     },
 };
 
