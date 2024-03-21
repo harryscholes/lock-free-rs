@@ -97,9 +97,6 @@ unsafe impl<T> Send for Receiver<T> {}
 #[derive(Debug)]
 pub struct SendError;
 
-#[derive(Debug)]
-pub struct ReceiveError;
-
 #[cfg(test)]
 mod tests {
     use std::thread;
