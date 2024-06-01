@@ -1,6 +1,9 @@
 pub mod arc;
+pub mod cond_var;
 pub mod mpmc;
 pub mod mpsc;
+pub mod mutex;
 pub mod oneshot;
 pub mod queue;
+pub mod rw_lock;
 pub mod spin_lock;

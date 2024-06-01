@@ -240,7 +240,7 @@ mod tests {
         }
 
         #[test]
-        fn test_multiple_concurrent_enqueurs_fifo_order(
+        fn test_multiple_concurrent_enqueuers_fifo_order(
             num_threads in 2..10usize,
             num_items in 0..100_000usize,
         ) {

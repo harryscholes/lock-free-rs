@@ -99,11 +99,10 @@ pub struct SendError;
 
 #[cfg(test)]
 mod tests {
-    use std::thread;
-
     use super::*;
     use proptest::collection::vec;
     use proptest::prelude::*;
+    use std::thread;
 
     proptest! {
         #[test]
