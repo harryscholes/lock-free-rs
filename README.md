@@ -1,5 +1,6 @@
-# lock-free-rs
-Lock-free stuff in Rust
+# concurrent-rs
+
+Concurrency primitives in Rust
 
 - `Arc`: an atomically reference-counted smart pointer
 - `CondVar`: a condition variable
